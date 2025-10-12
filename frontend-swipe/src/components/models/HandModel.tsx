@@ -7,7 +7,13 @@ type GLTFProps = JSX.IntrinsicElements["group"];
 type HandModelProps = GLTFProps & {
   setScore: (fn: (prev: number) => number) => void;
 };
-function HandModel({ setScore, difficulty, ...props }: HandModelProps) {
+function HandModel({
+  setScore,
+  setHealth,
+  difficulty,
+  setHitSignal,
+  ...props
+}: HandModelProps) {
   console.log("rerender");
   const { nodes, materials } = useGLTF("/Hand.glb");
   const [speed, setSpeed] = React.useState(1000);
@@ -64,6 +70,8 @@ function HandModel({ setScore, difficulty, ...props }: HandModelProps) {
         setScore((prev: number) => prev + 1);
       } else {
         console.log("wrong");
+        setHitSignal((prev: number) => prev + 1);
+        setHealth((prev: number) => prev - 1);
       }
 
       respondedRef.current = true;

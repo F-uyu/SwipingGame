@@ -1,28 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useSpring, useSprings, animated, easings } from "@react-spring/web";
+import { useSpring, useSprings, animated, to } from "@react-spring/web";
 import { Badge } from "@/components/ui/badge";
 import { Heart } from "lucide-react";
 import React from "react";
 const colors = [
-  "#ef4444",
   "#3b82f6",
   "#10b981",
   "#facc15",
   "#ec4899",
   "#8b5cf6",
+  "#ef4444",
 ];
 
 type Props = {
   score: number;
-  health: number; // current hearts (e.g., 3)
   maxHealth?: number; // total hearts (e.g., 5)
   hitSignal?: number; // increment this when the player gets hit
 };
 
 export default function AnimatedScore({
   score,
-  health,
   maxHealth = 3,
   hitSignal = 0,
 }: Props) {
@@ -46,54 +44,53 @@ export default function AnimatedScore({
     return () => clearInterval(interval);
   }, []);
   //heart
-  const [heartSprings, api] = useSprings(hearts.length, () => ({
-    from: { x: 0, rotate: 0, scale: 1, opacity: 1 },
-  }));
+  const [heartSprings, api] = useSprings(
+    hearts.length,
+    () => ({
+      x: 0,
+      rotate: 0,
+      scale: 1,
+      opacity: 1,
+      config: { tension: 280, friction: 20 },
+    }),
+    [hearts.length]
+  );
 
   useEffect(() => {
-    // short, punchy sequence
-    api.start(async (index) => {
-      // apply to all hearts (you can target only damaged ones if you track which lost health)
-      await api.start({
-        to: async (next) => {
-          // 1) pop + slight red flash
-          await next({
-            scale: 1.15,
-            rotate: 6,
-            x: 3,
-            opacity: 0.85,
-            config: { duration: 80, easing: easings.easeOutCubic },
-          });
-          // 2) counter sway
-          await next({
-            scale: 1.1,
-            rotate: -6,
-            x: -3,
-            opacity: 0.9,
-            config: { duration: 80, easing: easings.easeOutCubic },
-          });
-          // 3) settle with a tiny wobble
-          await next({
-            scale: 1.03,
-            rotate: 2,
-            x: 1,
-            opacity: 1,
-            config: { duration: 90, easing: easings.easeOutCubic },
-          });
-          // 4) back to idle
-          await next({
-            scale: 1,
-            rotate: 0,
-            x: 0,
-            opacity: 1,
-            config: { duration: 90, easing: easings.easeOutCubic },
-          });
-        },
-      });
-      return;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hitSignal]);
+    if (hitSignal === 0) return;
+    api.start(() => ({
+      to: async (next: any) => {
+        await next({
+          scale: 1.15,
+          rotate: 6,
+          x: 3,
+          opacity: 0.85,
+          config: { duration: 80 },
+        });
+        await next({
+          scale: 1.1,
+          rotate: -6,
+          x: -3,
+          opacity: 0.9,
+          config: { duration: 80 },
+        });
+        await next({
+          scale: 1.03,
+          rotate: 2,
+          x: 1,
+          opacity: 1,
+          config: { duration: 90 },
+        });
+        await next({
+          scale: 1,
+          rotate: 0,
+          x: 0,
+          opacity: 1,
+          config: { duration: 90 },
+        });
+      },
+    }));
+  }, [hitSignal, api]);
 
   return (
     <animated.div
@@ -105,9 +102,31 @@ export default function AnimatedScore({
       </Badge>
       <span className="text-2xl font-bold">{score}</span>
       <div className="flex flex-row gap-2 mt-2">
-        <Heart className="text-red-500 w-8 h-8 fill-red-500" />
-        <Heart className="text-red-500 w-8 h-8 fill-red-500" />
-        <Heart className="text-red-500 w-8 h-8 fill-red-500" />
+        {hearts.map((i) => {
+          const filled = i < maxHealth;
+
+          const transform = to(
+            [heartSprings[i].x, heartSprings[i].rotate, heartSprings[i].scale],
+            (x, r, s) => `translateX(${x}px) rotate(${r}deg) scale(${s})`
+          );
+
+          return (
+            <animated.div
+              key={i}
+              style={{ transform, opacity: heartSprings[i].opacity }}
+              className="w-8 h-8"
+              title={filled ? "Health" : "Empty"}
+            >
+              <Heart
+                className={
+                  filled
+                    ? "w-8 h-8 text-red-500 fill-red-500"
+                    : "w-8 h-8 text-red-500"
+                }
+              />
+            </animated.div>
+          );
+        })}
       </div>
     </animated.div>
   );
